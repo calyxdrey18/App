@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cool Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    
+    <style>
+        /* --- ALL CSS IS EMBEDDED HERE --- */
+        :root {
+            --primary-bg: #121212;
+            --secondary-bg: #1e1e1e;
+            --tertiary-bg: #2a2a2a;
+            --primary-text: #e0e0e0;
+            --secondary-text: #b0b0b0;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --my-message-bg: #3b82f6;
+            --other-message-bg: #373737;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--font-family);
+            background-color: var(--primary-bg);
+            color: var(--primary-text);
+            overflow: hidden;
+        }
+
+        #chat-app { display: flex; height: 100vh; }
+
+        /* --- Sidebar --- */
+        #sidebar {
+            width: 240px;
+            background-color: var(--secondary-bg);
+            padding: 20px;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+        #sidebar h3 { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        #user-list { list-style: none; padding: 0; flex-grow: 1; overflow-y: auto; }
+        #user-list li { padding: 8px 0; color: var(--secondary-text); }
+        #typing-indicator { height: 40px; color: var(--accent-color); font-style: italic; padding-top: 10px; border-top: 1px solid #444; }
+
+        /* --- Chat Window --- */
+        #chat-window { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--primary-bg); }
+        #messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        .message-wrapper { display: flex; margin-bottom: 15px; max-width: 70%; animation: fadeIn 0.3s ease-out; }
+        .message-wrapper.mine { align-self: flex-end; flex-direction: row-reverse; }
+        .message-bubble { padding: 10px 15px; border-radius: 18px; position: relative; word-wrap: break-word; color: white; }
+        .message-wrapper.mine .message-bubble { background-color: var(--my-message-bg); border-bottom-right-radius: 4px; }
+        .message-wrapper.other .message-bubble { background-color: var(--other-message-bg); border-bottom-left-radius: 4px; }
+        .message-meta { font-size: 0.8em; color: var(--secondary-text); margin: 0 10px; padding-top: 5px; }
+        .message-wrapper.mine .message-meta { text-align: right; }
+
+        /* File & Reply Styles */
+        .file-link, .media-container { margin-top: 5px; }
+        .file-link a { color: #fff; text-decoration: underline; }
+        .media-container img, .media-container video { max-width: 100%; border-radius: 10px; cursor: pointer; }
+        .media-container audio { width: 100%; }
+        .reply-context { background-color: rgba(255, 255, 255, 0.1); border-left: 3px solid var(--accent-color); padding: 5px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 0.9em; }
+        .reply-context strong { color: var(--accent-color); }
+        .reply-context blockquote { margin: 0; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--secondary-text); }
+        #reply-preview { background-color: var(--tertiary-bg); padding: 5px 20px; border-top: 1px solid #444; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s ease-in-out; }
+        #reply-preview.hidden { display: none; }
+        #cancel-reply-btn { background: none; border: none; color: var(--secondary-text); font-size: 1.2em; cursor: pointer; }
+
+        /* Form */
+        #form { display: flex; padding: 10px; background-color: var(--secondary-bg); border-top: 1px solid #333; }
+        #input { flex-grow: 1; padding: 12px; border: 1px solid var(--tertiary-bg); border-radius: 20px; background-color: var(--tertiary-bg); color: var(--primary-text); outline: none; margin: 0 10px; }
+        #input:focus { border-color: var(--accent-color); }
+        .icon-btn { background-color: var(--accent-color); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 1.1em; cursor: pointer; transition: background-color 0.2s; }
+        .icon-btn:hover { background-color: var(--accent-hover); }
+        .message-content { transition: transform 0.2s ease-out; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 768px) { #sidebar { display: none; } }
+    </style>
+</head>
+<body>
+    <div id="chat-app">
+        <div id="sidebar">
+            <h3>Online Users (<span id="user-count">0</span>)</h3>
+            <ul id="user-list"></ul>
+            <div id="typing-indicator"></div>
+        </div>
+        <div id="chat-window">
+            <div id="messages"></div>
+            <div id="reply-preview" class="hidden">
+                <div class="reply-content">
+                    <p>Replying to <strong id="reply-user"></strong></p>
+                    <blockquote id="reply-text"></blockquote>
+                </div>
+                <button id="cancel-reply-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form">
+                <input type="file" id="file-input" style="display: none;" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt">
+                <label for="file-input" class="icon-btn"><i class="fa-solid fa-paperclip"></i></label>
+                <input id="input" autocomplete="off" placeholder="Type a message..." />
+                <button type="submit" class="icon-btn"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // --- ALL JAVASCRIPT IS EMBEDDED HERE ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+
+            const form = document.getElementById('form');
+            const input = document.getElementById('input');
+            const messages = document.getElementById('messages');
+            const fileInput = document.getElementById('file-input');
+            const userCount = document.getElementById('user-count');
+            const userList = document.getElementById('user-list');
+            const typingIndicator = document.getElementById('typing-indicator');
+            const replyPreview = document.getElementById('reply-preview');
+            const cancelReplyBtn = document.getElementById('cancel-reply-btn');
+
+            let typingTimeout;
+            let currentlyTyping = {};
+            let replyToMessage = null;
+
+            const displayMessage = (msg) => {
+                const isMine = msg.user.id === socket.id;
+                const wrapper = document.createElement('div');
+                wrapper.className = `message-wrapper ${isMine ? 'mine' : 'other'}`;
+                wrapper.dataset.messageId = msg.id;
+                wrapper.dataset.userName = msg.user.name;
+
+                let contentHTML = '';
+                if (msg.replyTo) {
+                    contentHTML += `
+                        <div class="reply-context">
+                            <strong>${msg.replyTo.user.name}</strong>
+                            <blockquote>${msg.replyTo.content}</blockquote>
+                        </div>`;
+                }
+
+                if (msg.type === 'file') {
+                    const filename = msg.content.split('/').pop().toLowerCase();
+                    if (filename.match(/\.(jpeg|jpg|gif|png|svg)$/)) {
+                        contentHTML += `<div class="media-container"><img src="${msg.content}" alt="Image"></div>`;
+                    } else if (filename.match(/\.(mp4|webm|ogg)$/)) {
+                        contentHTML += `<div class="media-container"><video src="${msg.content}" controls></video></div>`;
+                    } else if (filename.match(/\.(mp3|wav|ogg)$/)) {
+                        contentHTML += `<div class="media-container"><audio src="${msg.content}" controls></audio></div>`;
+                    } else {
+                        contentHTML += `<div class="file-link"><a href="${msg.content}" target="_blank">Download: ${decodeURIComponent(filename.split('-').slice(1).join('-'))}</a></div>`;
+                    }
+                } else {
+                    contentHTML += `<p>${msg.content}</p>`;
+                }
+                
+                const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                wrapper.innerHTML = `
+                    <div class="message-meta">${isMine ? 'You' : msg.user.name}, ${time}</div>
+                    <div class="message-bubble">
+                        <div class="message-content">${contentHTML}</div>
+                    </div>
+                `;
+                
+                messages.appendChild(wrapper);
+                messages.scrollTop = messages.scrollHeight;
+            };
+
+            const updateTypingIndicator = () => {
+                const typers = Object.values(currentlyTyping);
+                if (typers.length === 0) typingIndicator.textContent = '';
+                else if (typers.length === 1) typingIndicator.textContent = `${typers[0].name} is typing...`;
+                else typingIndicator.textContent = `${typers.length} users are typing...`;
+            };
+
+            socket.on('history', (history) => {
+                messages.innerHTML = '';
+                history.forEach(displayMessage);
+            });
+            socket.on('chat message', displayMessage);
+            socket.on('update-users', ({ users, count }) => {
+                userCount.textContent = count;
+                userList.innerHTML = '';
+                Object.values(users).forEach(user => {
+                    const li = document.createElement('li');
+                    li.textContent = user.name + (user.id === socket.id ? ' (You)' : '');
+                    userList.appendChild(li);
+                });
+            });
+            socket.on('typing-status', ({ user, isTyping }) => {
+                if (isTyping) currentlyTyping[user.id] = user;
+                else delete currentlyTyping[user.id];
+                updateTypingIndicator();
+            });
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (input.value) {
+                    socket.emit('chat message', { content: input.value, type: 'text', replyTo: replyToMessage });
+                    input.value = '';
+                    socket.emit('stop-typing');
+                    cancelReply();
+                }
+            });
+
+            input.addEventListener('input', () => {
+                clearTimeout(typingTimeout);
+                socket.emit('typing');
+                typingTimeout = setTimeout(() => socket.emit('stop-typing'), 1500);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('file', file);
+                fetch('/upload', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.filePath) {
+                            socket.emit('chat message', { content: data.filePath, type: 'file', replyTo: replyToMessage });
+                            cancelReply();
+                        } else alert('File upload failed.');
+                    }).catch(err => alert('An error occurred during upload.'));
+            });
+
+            let touchStartX = 0, swipedElement = null;
+            messages.addEventListener('touchstart', (e) => {
+                const target = e.target.closest('.message-wrapper.other .message-content');
+                if (target) {
+                    swipedElement = target;
+                    touchStartX = e.touches[0].clientX;
+                }
+            }, { passive: true });
+            messages.addEventListener('touchmove', (e) => {
+                if (!swipedElement) return;
+                const diffX = e.touches[0].clientX - touchStartX;
+                if (diffX > 0 && diffX < 80) swipedElement.style.transform = `translateX(${diffX}px)`;
+            }, { passive: true });
+            messages.addEventListener('touchend', (e) => {
+                if (!swipedElement) return;
+                const diffX = e.changedTouches[0].clientX - touchStartX;
+                if (diffX > 50) {
+                    const messageWrapper = swipedElement.closest('.message-wrapper');
+                    replyToMessage = {
+                        id: messageWrapper.dataset.messageId,
+                        user: { name: messageWrapper.dataset.userName },
+                        content: swipedElement.textContent.trim().substring(0, 50) + '...'
+                    };
+                    replyPreview.classList.remove('hidden');
+                    document.getElementById('reply-user').textContent = replyToMessage.user.name;
+                    document.getElementById('reply-text').textContent = replyToMessage.content;
+                }
+                swipedElement.style.transform = 'translateX(0)';
+                swipedElement = null;
+            });
+
+            const cancelReply = () => {
+                replyToMessage = null;
+                replyPreview.classList.add('hidden');
+            };
+            cancelReplyBtn.addEventListener('click', cancelReply);
+        });
+    </script>
+</body>
+</html>
