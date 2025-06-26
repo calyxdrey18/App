@@ -1,16 +1,15 @@
 {
-  "name": "cool-chat-app",
+  "name": "live-chat-pro",
   "version": "1.0.0",
-  "description": "A feature-rich real-time chat application with file sharing.",
+  "description": "A live chat application with a modern UI.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "author": "",
+  "author": "Your Name Here",
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
-    "multer": "^1.4.5-lts.1",
     "socket.io": "^4.7.2"
   }
 }
